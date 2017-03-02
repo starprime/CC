@@ -37,16 +37,14 @@ public class Ecconect {
 	static List sgp = new ArrayList();
 	static List stpls =  new ArrayList();
 	static String insid="";
-
-	
 	static String keyName="EC2LINUX";
-	public static void main(String[] args) {
+	public  Ecconect() {
 		//TODO Auto-generated method stub
 		amazonEC2client = AmazonEC2ClientBuilder.standard().withRegion("us-west-2").build();
 		
 		s3client = new AmazonS3Client();
-		createInstance();
-		stopInstance();
+		//createInstance();
+		//stopInstance();
 		//createBucket();
 		//terminateIns();
 		//listBucket();
@@ -79,10 +77,12 @@ public class Ecconect {
 	
 	
 	
-	static void createInstance(){
+	static void createInstance(String str){
 		sgp.add("default");
 		
-		String Userdata ="#!/bin/bash\nsudo ./execcsendm.sh 100";
+		String Userdata ="#!/bin/bash\nsudo ./execcsendm.sh "+str;
+		System.out.println(Userdata);
+		
 		String formateddd = Base64.encodeBase64String(Userdata.getBytes());
 		
 		RunInstancesRequest run = new RunInstancesRequest();

@@ -20,6 +20,7 @@ import com.amazonaws.services.sqs.model.Message;
 import com.amazonaws.services.sqs.model.MessageAttributeValue;
 import com.amazonaws.services.sqs.model.ReceiveMessageRequest;
 import com.amazonaws.services.sqs.model.SendMessageRequest;
+import com.amazonaws.services.sqs.model.SendMessageResult;
 
 /**
  * This sample demonstrates how to make basic requests to Amazon SQS using the
@@ -53,16 +54,19 @@ public class RequestPiValue {
     	sqs.setRegion(usWest2);
         try { // just sending a message heres
             String myQueueUrl = "https://sqs.us-west-2.amazonaws.com/778891075578/request.fifo";          
-            Map<String, MessageAttributeValue> messageAttributes = new HashMap<String, MessageAttributeValue>();
-            messageAttributes.put("Value", new MessageAttributeValue().withDataType("Number").withStringValue("230.000000000000000001"));
             SendMessageRequest request = new SendMessageRequest();
 			request.withMessageBody(message);
 			request.withMessageGroupId("MyMessageGroupId1234567890");
 			request.withMessageDeduplicationId("MyMessageDeduplicationId1234567890");
 			request.withQueueUrl(myQueueUrl);
-			request.withMessageAttributes(messageAttributes);
 			sqs.sendMessage(request);     
             System.out.println("Sending a message to MyQueue.\n");
+            
+            SendMessageResult sendMessageResult = sqs.sendMessage(request);
+            String sequenceNumber = sendMessageResult.getSequenceNumber();
+            String messageId = sendMessageResult.getMessageId();
+            System.out.println("sending message result "+sendMessageResult.toString());
+            System.out.println("SendMessage succeed with messageId " + messageId + ", sequence number " + sequenceNumber + "\n");
         } 
         catch (AmazonServiceException ase) {
             System.out.println("Caught an AmazonServiceException, which means your request made it " +
