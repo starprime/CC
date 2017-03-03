@@ -74,8 +74,8 @@ public class ResponsePiValue {
 		    ec.createInstance(message.getBody());
 		    }
         System.out.println("Deleting a message.\n");
-        String messageReceiptHandle = messages.get(0).getReceiptHandle();
-        sqs.deleteMessage(new DeleteMessageRequest(myQueueUrl, messageReceiptHandle));
+        //String messageReceiptHandle = messages.get(0).getReceiptHandle();
+        //sqs.deleteMessage(new DeleteMessageRequest(myQueueUrl, messageReceiptHandle));
 		}
 }
 	

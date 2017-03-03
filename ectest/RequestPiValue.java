@@ -67,6 +67,8 @@ public class RequestPiValue {
             String messageId = sendMessageResult.getMessageId();
             System.out.println("sending message result "+sendMessageResult.toString());
             System.out.println("SendMessage succeed with messageId " + messageId + ", sequence number " + sequenceNumber + "\n");
+            ResponsePiValue repv = new ResponsePiValue();
+    		repv.processReq();
         } 
         catch (AmazonServiceException ase) {
             System.out.println("Caught an AmazonServiceException, which means your request made it " +
@@ -83,4 +85,27 @@ public class RequestPiValue {
             System.out.println("Error Message: " + ace.getMessage());
         }
     }
+	
+	public static double retPiVal(){
+		String resQueueUrl = "https://sqs.us-west-2.amazonaws.com/778891075578/response.fifo";      
+
+		ReceiveMessageRequest resMessageRequest = new ReceiveMessageRequest(resQueueUrl);
+		String ret = null;
+		List<Message> messages = sqs.receiveMessage(resMessageRequest).getMessages();
+        for (Message message : messages) {
+            System.out.println("  Message");
+            System.out.println("    MessageId:     " + message.getMessageId());
+            System.out.println("    ReceiptHandle: " + message.getReceiptHandle());
+            System.out.println("    MD5OfBody:     " + message.getMD5OfBody());
+            System.out.println("    Body:          " + message.getBody());
+            System.out.println("    Attribute:     " + message.getAttributes().entrySet().size());
+            ret = message.getBody();
+        }
+        System.out.println("Deleting a message.\n");
+        //String messageReceiptHandle = messages.get(0).getReceiptHandle();
+        //System.out.println("messageReceiptHandle : "+messageReceiptHandle);
+        //sqs.deleteMessage(new DeleteMessageRequest(resQueueUrl, messageReceiptHandle));
+        return Double.parseDouble(ret); // this is a bug
+	}
+	
 }
