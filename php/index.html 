@@ -1,0 +1,14 @@
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Cloud Computing</title>
+
+</head>
+<body>
+<form action="cloudpi.php" method="get">
+Input: <input type="text" name="inputdata" ><br>
+       <input align="center" type="submit">
+</form>
+
+</body>
+</html> 
