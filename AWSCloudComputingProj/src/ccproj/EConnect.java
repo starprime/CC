@@ -58,19 +58,18 @@ for(com.amazonaws.services.s3.model.Bucket b: buckets){
 }*/
 public static void createInstance(String str){
 sgp.add("default");
-
-String Userdata ="#!/bin/bash\nsudo java -jar AWSEx.jar "+str;
+String Userdata ="#!/bin/bash\nsudo java -jar /home/ec2-user/ExFileS3Termi.jar "+str;
 System.out.println(Userdata);
 
 String formateddd = Base64.encodeBase64String(Userdata.getBytes());
 
 RunInstancesRequest run = new RunInstancesRequest();
-run.withImageId("ami-33f47b53");
+run.withImageId("ami-f28d0492");
 run.withInstanceType("t2.micro");
 run.withMinCount(Integer.valueOf(1));
 run.withMaxCount(Integer.valueOf(1));
 run.withKeyName(keyName);
-run.withSecurityGroups(sgp);
+//run.withSecurityGroups(sgp);
 run.withUserData(formateddd);
 
 RunInstancesResult result = amazonEC2client.runInstances(run);

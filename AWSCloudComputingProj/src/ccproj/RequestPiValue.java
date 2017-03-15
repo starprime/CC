@@ -1,14 +1,51 @@
 package ccproj;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.IOException;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
+import java.io.ByteArrayInputStream;
 
+import com.amazon.sqs.javamessaging.AmazonSQSExtendedClient;
+import com.amazon.sqs.javamessaging.ExtendedClientConfiguration;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.profile.ProfileCredentialsProvider;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.model.GetObjectRequest;
+import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.sqs.AmazonSQSClient;
+import com.amazonaws.services.sqs.model.GetQueueUrlResult;
+import com.amazonaws.services.sqs.model.SendMessageRequest;
+import com.amazonaws.services.sqs.model.SendMessageResult;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import com.amazon.sqs.javamessaging.AmazonSQSExtendedClient;
+import com.amazon.sqs.javamessaging.ExtendedClientConfiguration;
+import com.amazonaws.AmazonClientException;
+import com.amazonaws.AmazonServiceException;
+import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.profile.ProfileCredentialsProvider;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.sqs.AmazonSQS;
+import com.amazonaws.services.sqs.AmazonSQSClient;
+import com.amazonaws.services.sqs.model.GetQueueUrlResult;
+import com.amazonaws.services.sqs.model.SendMessageRequest;
+import com.amazonaws.services.sqs.model.SendMessageResult;
+import com.amazonaws.regions.Region;
+import com.amazonaws.regions.Regions;
+
+
+
+import com.amazonaws.AmazonClientException;
+import com.amazonaws.AmazonServiceException;
 import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import com.amazonaws.regions.Region;
 import com.amazonaws.regions.Regions;
@@ -18,8 +55,11 @@ import com.amazonaws.services.ec2.model.*;
 import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.services.sqs.AmazonSQSClient;
 import com.amazonaws.services.sqs.model.*;
-import com.amazonaws.AmazonWebServiceRequest;
-import com.sun.org.apache.xpath.internal.operations.Bool;
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3Client;
 
 /**
 
@@ -41,13 +81,31 @@ import com.sun.org.apache.xpath.internal.operations.Bool;
  */
 
 public class RequestPiValue {
+	static AmazonSQS sqsExtended;
+    static AmazonS3 s3client;
     static AmazonSQS sqs = new AmazonSQSClient();
     static Region usWest2 = Region.getRegion(Regions.US_WEST_2);
     static AmazonEC2 amazonEC2client;
     static String myQueueUrl = null,respQueueUrl=null;
     String str = null;
-    int cnt=0;
+    static int cnt=0;
+    public static void cretest(){
+        try{
+            Process p;
+            System.out.println("setting credentials");
+            String cmd ="/usr/./setcred.sh";
+            p = Runtime.getRuntime().exec(cmd);
+            p.waitFor();
 
+        }
+        catch(IOException ex) {
+            System.out.println (ex.toString());
+
+        }
+        catch(InterruptedException e2) {
+            System.out.println("I was interrupted! i am not happy ");
+        }
+    }
     public void setinp(String msg){
         str=msg;
     }
@@ -64,23 +122,60 @@ public class RequestPiValue {
         return cnt;
     }
     public RequestPiValue(String message) {
+    	String s3BucketName="star-cc-pro";
+        
+            AWSCredentials credentials = null;
+
+            try {
+                credentials = new ProfileCredentialsProvider("default").getCredentials();
+            } catch (Exception e) {
+                throw new AmazonClientException(
+                        "Cannot load the AWS credentials from the expected AWS credential profiles file. "
+                                + "Make sure that your credentials file is at the correct "
+                                + "location (/home/$USER/.aws/credentials) and is in a valid format.", e);
+            }
+
+            AmazonS3 s3 = new AmazonS3Client(credentials);
+            Region s3Region = Region.getRegion(Regions.US_WEST_2);
+            s3.setRegion(s3Region);
+
+
+            // Set the SQS extended client configuration with large payload support enabled.
+            ExtendedClientConfiguration extendedClientConfig = new ExtendedClientConfiguration()
+                    .withLargePayloadSupportEnabled(s3, s3BucketName);
+
+             sqsExtended = new AmazonSQSExtendedClient(new AmazonSQSClient(credentials), extendedClientConfig);
+            Region sqsRegion = Region.getRegion(Regions.US_WEST_2);
+            sqsExtended.setRegion(sqsRegion);
+
+
+            String QueueName = "star-s3-str-res";//"star-s3-str-res";
+            CreateQueueRequest createQueueRequest = new CreateQueueRequest("star-s3-str-res");
+            
+
+    	
+    	
+    	
+        cretest();
         Boolean flg=true;
         setinp(message);
 
         sqs.setRegion(usWest2);
 
-            CreateQueueRequest createQueueRequest = new CreateQueueRequest("request");
-            myQueueUrl = sqs.createQueue(createQueueRequest).getQueueUrl();
-            System.out.println("Creating Request Queue");
+        /*
+        Map<String, String> attributes = new HashMap<String, String>();
+        // A FIFO queue must have the FifoQueue attribute set to True
+        attributes.put("FifoQueue", "true");
+        // Generate a MessageDeduplicationId based on the content, if the user doesn't provide a MessageDeduplicationId
+        attributes.put("ContentBasedDeduplication", "true");
+        // The FIFO queue name must end with the .fifo suffix
+        CreateQueueRequest createQueueRequest = new CreateQueueRequest("request.fifo").withAttributes(attributes);
+        String myQueueUrl = sqs.createQueue(createQueueRequest).getQueueUrl();
+        */
 
-        //gqr = sqs.getQueueUrl("response.fifo");
-        //respQueueUrl = gqr.getQueueUrl();
-            CreateQueueRequest createQueueResponse = new CreateQueueRequest("response");
-            respQueueUrl = sqs.createQueue(createQueueResponse).getQueueUrl();
-            System.out.println("Creating Response Queue");
 
-        //GetQueueUrlResult gqr = sqs.getQueueUrl("request.fifo");
-        //myQueueUrl = gqr.getQueueUrl();
+        GetQueueUrlResult gqr = sqs.getQueueUrl("request");
+        myQueueUrl = gqr.getQueueUrl();
         try { // just sending a message heres
             SendMessageRequest request = new SendMessageRequest();
             request.withMessageBody(message);
@@ -91,13 +186,16 @@ public class RequestPiValue {
             System.out.println("Sending a message " + message + " to Req ques.\n");
 
             while (flg){
-                if(getcnt()<2){
-                    System.out.println("yeee no aa gya mera");
+                System.out.println("Counter is "+getcnt()+"\n");
+                if(getcnt()<10){
+                    System.out.println("Counter is less than 10 "+getcnt()+"creating instance req\n");
+
                     ResponsePiValue repv = new ResponsePiValue(message);
                     inccnt();
                     flg=false;
                 }
-                else {System.out.println("Ec2 instance limit is full,waiting..");
+                else {
+                    System.out.println("Ec2 instance limit is full,waiting..");
                     listInstances();
                 }
             }
@@ -119,8 +217,9 @@ public class RequestPiValue {
         }
     }
 
-    static void listInstances() {
+    public void listInstances() {
         amazonEC2client = AmazonEC2ClientBuilder.standard().withRegion("us-west-2").build();
+
 
         DescribeInstancesResult di = amazonEC2client.describeInstances();
 
@@ -138,19 +237,21 @@ public class RequestPiValue {
     }
 
 
-    static void terminateIns(String str) {
+    public void terminateIns(String str) {
         TerminateInstancesRequest term = new TerminateInstancesRequest();
         term.withInstanceIds(str);
         System.out.print("in terminate instance deleting instance" + str);
-
+        deccnt();
         TerminateInstancesResult result = amazonEC2client.terminateInstances(term);
 
         System.out.println("terminate " + result.toString());
     }
 
     public  String retPiVal() {
-         // IF YOU WANT TO DELETE OTHER RUNNING INSTANCES
+        // IF YOU WANT TO DELETE OTHER RUNNING INSTANCES
 
+        GetQueueUrlResult gqr = sqsExtended.getQueueUrl("star-s3-str-res");
+        String respQueueUrl = gqr.getQueueUrl();
         System.out.println("i am in retpal,listening to quque " + respQueueUrl);
 
         ReceiveMessageRequest resMessageRequest = new ReceiveMessageRequest(respQueueUrl);
@@ -158,27 +259,27 @@ public class RequestPiValue {
         int cnt=0;
         Boolean flg = true;
         while (flg) {
-            List<Message> messages = sqs.receiveMessage(resMessageRequest).getMessages();
-            System.out.println("Listening...for "+str);
+            List<Message> messages = sqsExtended.receiveMessage(resMessageRequest).getMessages();
+            //System.out.print("..Listening...for "+str);
 
             for (Message message : messages) {
-                System.out.println("  Message");
-                System.out.println("    MessageId:     " + message.getMessageId());
-                System.out.println("    ReceiptHandle: " + message.getReceiptHandle());
-                System.out.println("    MD5OfBody:     " + message.getMD5OfBody());
-                System.out.println("    Body:          " + message.getBody());
-                System.out.println("    Attribute:     " + message.getAttributes().entrySet().size());
+                //System.out.println("  Message");
+                //System.out.println("    MessageId:     " + message.getMessageId());
+                //System.out.println("    ReceiptHandle: " + message.getReceiptHandle());
+                //System.out.println("    MD5OfBody:     " + message.getMD5OfBody());
+                //System.out.println("    Body:          " + message.getBody());
+                //System.out.println("    Attribute:     " + message.getAttributes().entrySet().size());
                 ret = message.getBody();
-
-                System.out.println("the result is \n" + ret);
 
                 String[] token = ret.split("[-]");
                 System.out.print("tok : " + token[0] + "\nstr : " + str);
                 if (token[0].equals(getinp())) {
-                    String messageReceiptHandle = message.getReceiptHandle();
-                    sqs.deleteMessage(new DeleteMessageRequest(respQueueUrl, messageReceiptHandle));
-                    System.out.println("\nmessage from request queue deleted");
+                    System.out.println("\nrecieved response for "+token[0]);
+                    //    String messageReceiptHandle = message.getReceiptHandle();
+                    //    sqs.deleteMessage(new DeleteMessageRequest(respQueueUrl, messageReceiptHandle));
+                    //    System.out.println("\nmessage from response queue deleted");
                     System.out.println("\nthe result is \n" + token[1]);
+                    Put_Object(token[0],token[1]);
                     deccnt();
                     return token[1];
                 }
@@ -186,5 +287,56 @@ public class RequestPiValue {
         }
         return "0.0";
     }
+    public  void Put_Object(String key,String message){
+        String bucketName="star-cc-pro";
+
+        try {
+            s3client = new AmazonS3Client(new ProfileCredentialsProvider());
+
+            ByteArrayInputStream input = new ByteArrayInputStream(message.getBytes());
+
+            System.out.println("Uploading a new object to S3 from a file\n");
+            //s3client.putObject(new PutObjectRequest(
+            //	"star-cc-pro","1", message));
+
+            s3client.putObject(bucketName,key,input,new ObjectMetadata());
+
+
+            S3Object s3object = s3client.getObject(new GetObjectRequest(
+                    bucketName, key));
+            BufferedReader reader = new BufferedReader(new InputStreamReader(s3object.getObjectContent()));
+            String line;
+            try {
+                while((line = reader.readLine()) != null) {
+                    // can copy the content locally as well
+                    // using a buffered writer
+                    System.out.println(line);
+                }
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+
+
+        } catch (AmazonServiceException ase) {
+            System.out.println("Caught an AmazonServiceException, which " +
+                    "means your request made it " +
+                    "to Amazon S3, but was rejected with an error response" +
+                    " for some reason.");
+            System.out.println("Error Message:    " + ase.getMessage());
+            System.out.println("HTTP Status Code: " + ase.getStatusCode());
+            System.out.println("AWS Error Code:   " + ase.getErrorCode());
+            System.out.println("Error Type:       " + ase.getErrorType());
+            System.out.println("Request ID:       " + ase.getRequestId());
+        } catch (AmazonClientException ace) {
+            System.out.println("Caught an AmazonClientException, which " +
+                    "means the client encountered " +
+                    "an internal error while trying to " +
+                    "communicate with S3, " +
+                    "such as not being able to access the network.");
+            System.out.println("Error Message: " + ace.getMessage());
+        }
+    }
+
 }
 
