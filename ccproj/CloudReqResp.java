@@ -125,12 +125,12 @@ public class CloudReqResp extends HttpServlet implements Servlet {
 	     
 	     out.println(output + " is returned from the Server ");
 	    // System.out.println(request.getQueryString());
-	     if (request.getParameter("inputdata") == null) {
+/*	     if (request.getParameter("inputdata") == null) {
 	         out.println("Please enter a number");
 	     } else {
 	         out.println("Hello <b>"+request. getParameter("inputdata")+"</b>!");
 	     }
-	    
+*/    
 	}
 
 	/**

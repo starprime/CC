@@ -6,8 +6,11 @@ import java.io.IOException;
 
 import java.io.ByteArrayInputStream;
 
+import com.amazon.sqs.javamessaging.AmazonSQSExtendedClient;
+import com.amazon.sqs.javamessaging.ExtendedClientConfiguration;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
+import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
@@ -22,6 +25,22 @@ import com.amazonaws.services.sqs.model.SendMessageResult;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import com.amazon.sqs.javamessaging.AmazonSQSExtendedClient;
+import com.amazon.sqs.javamessaging.ExtendedClientConfiguration;
+import com.amazonaws.AmazonClientException;
+import com.amazonaws.AmazonServiceException;
+import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.profile.ProfileCredentialsProvider;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.sqs.AmazonSQS;
+import com.amazonaws.services.sqs.AmazonSQSClient;
+import com.amazonaws.services.sqs.model.GetQueueUrlResult;
+import com.amazonaws.services.sqs.model.SendMessageRequest;
+import com.amazonaws.services.sqs.model.SendMessageResult;
+import com.amazonaws.regions.Region;
+import com.amazonaws.regions.Regions;
 
 
 
@@ -62,6 +81,7 @@ import com.amazonaws.services.s3.AmazonS3Client;
  */
 
 public class RequestPiValue {
+	static AmazonSQS sqsExtended;
     static AmazonS3 s3client;
     static AmazonSQS sqs = new AmazonSQSClient();
     static Region usWest2 = Region.getRegion(Regions.US_WEST_2);
@@ -102,6 +122,40 @@ public class RequestPiValue {
         return cnt;
     }
     public RequestPiValue(String message) {
+    	String s3BucketName="star-cc-pro";
+        
+            AWSCredentials credentials = null;
+
+            try {
+                credentials = new ProfileCredentialsProvider("default").getCredentials();
+            } catch (Exception e) {
+                throw new AmazonClientException(
+                        "Cannot load the AWS credentials from the expected AWS credential profiles file. "
+                                + "Make sure that your credentials file is at the correct "
+                                + "location (/home/$USER/.aws/credentials) and is in a valid format.", e);
+            }
+
+            AmazonS3 s3 = new AmazonS3Client(credentials);
+            Region s3Region = Region.getRegion(Regions.US_WEST_2);
+            s3.setRegion(s3Region);
+
+
+            // Set the SQS extended client configuration with large payload support enabled.
+            ExtendedClientConfiguration extendedClientConfig = new ExtendedClientConfiguration()
+                    .withLargePayloadSupportEnabled(s3, s3BucketName);
+
+             sqsExtended = new AmazonSQSExtendedClient(new AmazonSQSClient(credentials), extendedClientConfig);
+            Region sqsRegion = Region.getRegion(Regions.US_WEST_2);
+            sqsExtended.setRegion(sqsRegion);
+
+
+            String QueueName = "star-s3-str-res";//"star-s3-str-res";
+            CreateQueueRequest createQueueRequest = new CreateQueueRequest("star-s3-str-res");
+            
+
+    	
+    	
+    	
         cretest();
         Boolean flg=true;
         setinp(message);
@@ -118,9 +172,7 @@ public class RequestPiValue {
         CreateQueueRequest createQueueRequest = new CreateQueueRequest("request.fifo").withAttributes(attributes);
         String myQueueUrl = sqs.createQueue(createQueueRequest).getQueueUrl();
         */
-        CreateQueueRequest createQueueResponse = new CreateQueueRequest("star-s3-str-res");
-        respQueueUrl = sqs.createQueue(createQueueResponse).getQueueUrl();
-        System.out.println("Creating Response Queue");
+
 
         GetQueueUrlResult gqr = sqs.getQueueUrl("request");
         myQueueUrl = gqr.getQueueUrl();
@@ -198,7 +250,7 @@ public class RequestPiValue {
     public  String retPiVal() {
         // IF YOU WANT TO DELETE OTHER RUNNING INSTANCES
 
-        GetQueueUrlResult gqr = sqs.getQueueUrl("star-s3-str-res");
+        GetQueueUrlResult gqr = sqsExtended.getQueueUrl("star-s3-str-res");
         String respQueueUrl = gqr.getQueueUrl();
         System.out.println("i am in retpal,listening to quque " + respQueueUrl);
 
@@ -207,7 +259,7 @@ public class RequestPiValue {
         int cnt=0;
         Boolean flg = true;
         while (flg) {
-            List<Message> messages = sqs.receiveMessage(resMessageRequest).getMessages();
+            List<Message> messages = sqsExtended.receiveMessage(resMessageRequest).getMessages();
             //System.out.print("..Listening...for "+str);
 
             for (Message message : messages) {
